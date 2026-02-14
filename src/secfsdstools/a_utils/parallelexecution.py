@@ -219,8 +219,10 @@ class ParallelExecutor(ParallelExecutorBase[IT, PT, OT]):
     """
 
     def _execute_parallel(self, chunk: List[IT]) -> List[PT]:
-        with Pool(self.processes) as pool:
-            return pool.map(self._process_throttled_parallel, chunk)
+        import tqdm_pathos
+
+        results = tqdm_pathos.map(self._process_throttled_parallel, chunk)
+        return results
 
 
 class ThreadExecutor(ParallelExecutorBase[IT, PT, OT]):
