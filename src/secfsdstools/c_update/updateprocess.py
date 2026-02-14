@@ -354,6 +354,8 @@ class Updater:
             # update the timestamp of the last check
             self.db_state_accesor.set_key(Updater.LAST_UPDATE_CHECK_KEY, str(time.time()))
 
+            return
+
             print_sponsoring_message()
 
             # print unused feature messages

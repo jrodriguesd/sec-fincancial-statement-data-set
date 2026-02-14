@@ -48,12 +48,14 @@ class ParallelExecutorBase(Generic[IT, PT, OT], ABC):
     get_entries_function, these entries will not be part of
     """
 
-    def __init__(self,
-                 processes: int = cpu_count(),
-                 chunksize: int = 100,
-                 max_calls_per_sec: int = 0,
-                 intend: str = "    ",
-                 execute_serial: bool = False):
+    def __init__(
+        self,
+        processes: int = cpu_count(),
+        chunksize: int = 100,
+        max_calls_per_sec: int = 0,
+        intend: str = "    ",
+        execute_serial: bool = False,
+    ):
         """
         Args:
             processes (int, optional, cpu_count()): number of parallel processes,
@@ -85,10 +87,19 @@ class ParallelExecutorBase(Generic[IT, PT, OT], ABC):
 
         if len(logging.root.handlers) > 0:
             formatter = logging.root.handlers[0].formatter
-            # Get the format string of the formatter
-            self.format_string = formatter._fmt
-        else:
-            self.format_string = "%(asctime)s [%(levelname)s] %(module)s  %(message)s"
+
+            logger = logging.getLogger()
+            self.logger_level = logger.getEffectiveLevel()
+            self.logger_fmt = logger.handlers[0].formatter._fmt
+
+            logger_handlers_props = []
+            for handler in logger.handlers:
+                props = {}
+                props["stream"] = handler.stream
+                props["fmt"] = handler.formatter._fmt
+                logger_handlers_props.append(props)
+
+            self.logger_handlers_props = logger_handlers_props
 
     def set_get_entries_function(self, get_entries: Callable[[], List[IT]]):
         """
@@ -136,10 +147,12 @@ class ParallelExecutorBase(Generic[IT, PT, OT], ABC):
     def _process_throttled_parallel(self, data: IT) -> PT:
         logger = logging.getLogger()
         if not logger.hasHandlers():
-            logger.setLevel(logging.INFO)
-            handler = logging.StreamHandler()
-            handler.setFormatter(logging.Formatter(self.format_string))
-            logger.addHandler(handler)
+            logger.setLevel(self.logger_level)
+            for hp in self.logger_handlers_props:
+                handler = logging.StreamHandler(hp["stream"])
+                handler.setFormatter(logging.Formatter(hp["fmt"]))
+                handler.setLevel(self.logger_level)
+                logger.addHandler(handler)
         return self._process_throttled(data)
 
     @abstractmethod
@@ -177,7 +190,7 @@ class ParallelExecutorBase(Generic[IT, PT, OT], ABC):
                 chunk_entries = len(missing)
 
             for i in range(0, len(missing), chunk_entries):
-                chunk = missing[i:i + chunk_entries]
+                chunk = missing[i : i + chunk_entries]
 
                 processed: List[PT]
 
@@ -204,6 +217,7 @@ class ParallelExecutor(ParallelExecutorBase[IT, PT, OT]):
     """
     Parallel executor that uses multiprocess package to parallelize
     """
+
     def _execute_parallel(self, chunk: List[IT]) -> List[PT]:
         with Pool(self.processes) as pool:
             return pool.map(self._process_throttled_parallel, chunk)
@@ -213,6 +227,7 @@ class ThreadExecutor(ParallelExecutorBase[IT, PT, OT]):
     """
     Parallel exector that uses Threads to parallelize
     """
+
     def _execute_parallel(self, chunk: List[IT]) -> List[PT]:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Herunterladen der Dateien parallel

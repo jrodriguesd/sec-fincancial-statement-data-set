@@ -52,6 +52,7 @@ dependencies = [
     "numpy>=1.0,<2.0",
     "requests>=2.0",
     "pathos~=0.3",
+    "tqdm-pathos~=0.4",
     "pyarrow>=8.0",
     "fastparquet>=0.5",
     "pandera==0.22.1",
