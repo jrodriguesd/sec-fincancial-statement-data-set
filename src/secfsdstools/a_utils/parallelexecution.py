@@ -221,7 +221,7 @@ class ParallelExecutor(ParallelExecutorBase[IT, PT, OT]):
     def _execute_parallel(self, chunk: List[IT]) -> List[PT]:
         import tqdm_pathos
 
-        results = tqdm_pathos.map(self._process_throttled_parallel, chunk)
+        results = tqdm_pathos.map(self._process_throttled_parallel, chunk, tqdm_kwargs={"leave": False})
         return results
 
 
