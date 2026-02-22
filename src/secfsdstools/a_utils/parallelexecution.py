@@ -189,7 +189,9 @@ class ParallelExecutorBase(Generic[IT, PT, OT], ABC):
             if self.chunksize == 0:
                 chunk_entries = len(missing)
 
-            for i in range(0, len(missing), chunk_entries):
+            from tqdm import tqdm
+
+            for i in tqdm(range(0, len(missing), chunk_entries), leave=False):
                 chunk = missing[i : i + chunk_entries]
 
                 processed: List[PT]
@@ -231,6 +233,14 @@ class ThreadExecutor(ParallelExecutorBase[IT, PT, OT]):
     """
 
     def _execute_parallel(self, chunk: List[IT]) -> List[PT]:
+        import tqdm_pathos
+
+        results = tqdm_pathos.map(self._process_throttled_parallel, chunk, tqdm_kwargs={"leave": False})
+        return results
+
+        from tqdm.contrib.concurrent import thread_map
+
         with concurrent.futures.ThreadPoolExecutor() as executor:
+            thread_map(self._process_throttled_parallel, chunk, tqdm_kwargs={"leave": False})
             # Herunterladen der Dateien parallel
-            return list(executor.map(self._process_throttled_parallel, chunk))
+            # return list(executor.map(self._process_throttled_parallel, chunk))
